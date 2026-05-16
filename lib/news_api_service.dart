@@ -4,17 +4,26 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'article.dart';
 import 'cache_manager.dart';
+import 'config.dart';
 
 class NewsApiService {
-  final String apiKey = '06c35b644d90456d9c3ffb64dca6c39b'; // Get free key at https://newsapi.org
-  final String baseUrl = 'https://newsapi.org/v2';
+  // Use configuration from AppConfig
+  late final String baseUrl;
+  late final int apiTimeout;
+  
   final CacheManager cacheManager = CacheManager();
 
-  /// Validates if the API key has been set
-  bool get isApiKeyConfigured => apiKey.isNotEmpty && apiKey != 'YOUR_API_KEY_HERE';
+  NewsApiService() {
+    // Initialize from configuration
+    baseUrl = AppConfig.backendUrl;
+    apiTimeout = AppConfig.apiTimeout;
+  }
+
+  /// Validates if the API is properly configured
+  bool get isConfigured => baseUrl.isNotEmpty;
 
   /// Fetches top headlines with optional filters and pagination
-  /// [country] - Country code (e.g., 'us' for USA - NewsAPI.org uses lowercase)
+  /// [country] - Country code (e.g., 'us' for USA - Not used with backend)
   /// [category] - News category (e.g., 'business', 'sports', 'health')
   /// [page] - Page number for pagination (starts at 1)
   /// [pageSize] - Number of articles per page (default 20, max 100)
@@ -26,14 +35,6 @@ class NewsApiService {
     int pageSize = 20,
     bool useCache = true,
   }) async {
-    if (!isApiKeyConfigured) {
-      throw Exception('API key not configured. Please set your NewsAPI.org API key. Get one free at https://newsapi.org');
-    }
-
-    if (country.isEmpty) {
-      throw Exception('Country code cannot be empty');
-    }
-
     if (page < 1) {
       throw Exception('Page number must be greater than 0');
     }
@@ -51,11 +52,17 @@ class NewsApiService {
       }
     }
 
-    String url = '$baseUrl/top-headlines?country=${country.toLowerCase()}&apikey=$apiKey';
+    // Build URL with pagination parameters
+    String url = '$baseUrl/news/top-headlines?page=$page&pageSize=$pageSize';
+    
+    // Add category if provided
+    if (category != null && category.isNotEmpty) {
+      url = '$baseUrl/news/category/$category?page=$page&pageSize=$pageSize';
+    }
 
     try {
       final response = await http.get(Uri.parse(url)).timeout(
-        const Duration(seconds: 10),
+        Duration(seconds: apiTimeout),
         onTimeout: () => throw Exception('Request timeout. Please check your internet connection.'),
       );
 
@@ -85,10 +92,10 @@ class NewsApiService {
         }
 
         return articles;
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Invalid API key. Get a free key at https://newsapi.org');
-      } else if (response.statusCode == 429) {
-        throw Exception('Too many requests: Rate limit exceeded');
+      } else if (response.statusCode == 400) {
+        throw Exception('Bad request: ${response.body}');
+      } else if (response.statusCode == 404) {
+        throw Exception('Endpoint not found. Is the backend server running?');
       } else {
         throw Exception('Failed to load news (Status: ${response.statusCode})');
       }
@@ -107,7 +114,7 @@ class NewsApiService {
 
   /// Searches for news articles by query with pagination
   /// [query] - Search query string
-  /// [sortBy] - Sort results by 'relevancy', 'popularity', or 'publishedAt'
+  /// [sortBy] - Sort results by 'relevancy', 'popularity', or 'publishedAt' (not used with backend)
   /// [page] - Page number for pagination (starts at 1)
   /// [pageSize] - Number of articles per page (default 20, max 100)
   /// [useCache] - Whether to use cached data if available
@@ -118,10 +125,6 @@ class NewsApiService {
     int pageSize = 20,
     bool useCache = true,
   }) async {
-    if (!isApiKeyConfigured) {
-      throw Exception('API key not configured. Please set your NewsAPI.org API key. Get one free at https://newsapi.org');
-    }
-
     if (query.isEmpty) {
       throw Exception('Search query cannot be empty');
     }
@@ -143,11 +146,12 @@ class NewsApiService {
       }
     }
 
-    final String url = '$baseUrl/everything?q=$query&sortBy=$sortBy&page=$page&pageSize=$pageSize&apikey=$apiKey';
+    // Build URL with URL encoding for the query parameter
+    final String url = '$baseUrl/news/search?q=${Uri.encodeComponent(query)}&page=$page&pageSize=$pageSize';
 
     try {
       final response = await http.get(Uri.parse(url)).timeout(
-        const Duration(seconds: 10),
+        Duration(seconds: apiTimeout),
         onTimeout: () => throw Exception('Request timeout. Please check your internet connection.'),
       );
 
@@ -177,10 +181,10 @@ class NewsApiService {
         }
 
         return articles;
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Invalid API key. Get a free key at https://newsapi.org');
-      } else if (response.statusCode == 429) {
-        throw Exception('Too many requests: Rate limit exceeded');
+      } else if (response.statusCode == 400) {
+        throw Exception('Bad request: ${response.body}');
+      } else if (response.statusCode == 404) {
+        throw Exception('Endpoint not found. Is the backend server running?');
       } else {
         throw Exception('Failed to search news (Status: ${response.statusCode})');
       }

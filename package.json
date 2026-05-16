@@ -1,0 +1,29 @@
+{
+  "name": "news_app_lab",
+  "version": "1.0.0",
+  "description": "A modern Flutter-based news application that fetches and displays top headlines and allows users to search for news articles. Built for ITT632 Mobile Cloud Computing course.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malsaaaa/newsapp_lab1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/malsaaaa/newsapp_lab1/issues"
+  },
+  "homepage": "https://github.com/malsaaaa/newsapp_lab1#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}

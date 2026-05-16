@@ -6,8 +6,17 @@ import 'article.dart';
 import 'news_api_service.dart';
 import 'article_detail_page.dart';
 import 'theme.dart';
+import 'config.dart';
 
-void main() {
+void main() async {
+  // Initialize environment configuration
+  await AppConfig.initialize();
+  
+  // Log configuration for debugging
+  if (AppConfig.enableDetailedLogs) {
+    AppConfig.printConfiguration();
+  }
+  
   runApp(const NewsApp());
 }
 
